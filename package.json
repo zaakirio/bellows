@@ -1,0 +1,27 @@
+{
+  "name": "bellows",
+  "version": "0.1.0",
+  "description": "MCP server for managing a local llama.cpp model fleet: discover GGUF models, supervise llama-server processes, smoke-test them, and query eval history.",
+  "type": "module",
+  "bin": {
+    "bellows": "dist/index.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "node --test test/*.test.ts",
+    "test:unit": "node --test test/models.test.ts test/evals.test.ts test/args.test.ts test/schemas.test.ts",
+    "test:integration": "node --test test/integration.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "typescript": "^6.0.3"
+  }
+}
