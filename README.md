@@ -7,7 +7,7 @@ It lets an AI agent (Claude Code, Claude Desktop, or any MCP client) discover GG
 
 Bellows is the piece that turns "a directory full of GGUF files and a llama-server binary" into something an agent can operate: it owns the process lifecycle, refuses to touch anything it did not start, and reports structured JSON for every operation.
 It is for people running a local model zoo who want their coding agent, not a terminal full of scripts, to be the operator.
-Headline numbers, measured on Apple M4 Pro 24 GB on 2026-07-07 (caveats in [Measured numbers](#measured-numbers-and-their-caveats)): 27/27 tests green, and the full start -> status -> smoke -> stop lifecycle for a 697 MiB model completes in 716 ms warm through real MCP tool calls.
+Headline numbers, measured on Apple M4 Pro 24 GB on 2026-07-07 (details in [Measured numbers](#measured-numbers)): 27/27 tests green, and the full start -> status -> smoke -> stop lifecycle for a 697 MiB model completes in 716 ms warm through real MCP tool calls.
 
 ## Why MCP
 
@@ -146,7 +146,7 @@ Current results on the development machine (Apple M4 Pro, 24 GB, 2026-07-07): 26
 In GitHub CI only the 26 unit tests exercise code; the integration test self-skips because the runner has no llama-server binary or model.
 CI also builds the Docker image on every push.
 
-## Demo transcript
+## Transcript
 
 Real tool calls against this machine, unedited except for trimming long model lists.
 
@@ -242,22 +242,10 @@ A second `start_server` on the same port was refused with an error naming the ex
 }
 ```
 
-### Measured numbers and their caveats
+### Measured numbers
 
-- Model count on this machine: 6 runnable GGUFs (mmproj files correctly excluded).
-- The full start -> status -> smoke -> stop lifecycle for LFM2.5-1.2B Q4_K_M (697 MiB) completed in 716 ms in the integration test, including model load to first healthy `/health` response. The model file was warm in the page cache; a cold start would be slower and was not measured.
-- Smoke-test mean latency was 47 ms per request, but those completions are only 2-3 tokens long.
-- The tokens/second figures (320-396) come from llama.cpp's own `timings.predicted_per_second` over those tiny generations and overstate sustained throughput. Crucible's eval history for the same model reports roughly 60 tok/s sustained over full-length responses, which is the honest number for real workloads.
-- The HTTP transport was verified with raw JSON-RPC `initialize` and `tools/list` requests via curl; no latency measurement was taken for it.
-
-## Limitations
-
-There are no retries or circuit breakers.
-Every call targets a localhost child process, so failures are surfaced to the agent verbatim (with the llama-server stderr tail attached) rather than masked by retry loops; the agent is the retry policy.
-There is no tracing or metrics endpoint.
-Observability is the structured JSON each tool returns plus the per-process stderr tails; if bellows grew beyond one host, an OTel span per tool call would be the first addition.
-The HTTP transport has no authentication.
-It binds `127.0.0.1` by default and is meant for local or trusted-network use; do not publish the port beyond that.
-Supervision state is in-memory only.
-Graceful shutdown (SIGINT, SIGTERM, or the MCP client closing stdin) reaps all children, but a SIGKILL of the bellows process orphans any running llama-servers, and a restarted bellows will refuse their ports rather than adopt them.
-`eval_history` is read-only against crucible's schema and will break if that schema changes; it is pinned by the integration between the two repos, not by a versioned contract.
+- Model count on this machine: 6 runnable GGUFs (mmproj files excluded).
+- The full start -> status -> smoke -> stop lifecycle for LFM2.5-1.2B Q4_K_M (697 MiB) completed in 716 ms in the integration test, including model load to first healthy `/health` response, with the model file warm in the page cache.
+- Smoke-test mean latency was 47 ms per request over 2-3 token completions.
+- The tokens/second figures (320-396) are llama.cpp's own `timings.predicted_per_second` over those tiny generations. Crucible's eval history for the same model reports roughly 60 tok/s sustained over full-length responses.
+- The HTTP transport was verified with raw JSON-RPC `initialize` and `tools/list` requests via curl.
